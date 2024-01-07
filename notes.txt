@@ -1,0 +1,8 @@
+>>> context_tbl.aggregate(hl.agg.collect_as_set(context_tbl['variant_type']))
+{'CpG', 'non-CpG transition', 'transversion'}=================> (737 + 8) / 761]
+
+# genome downsampled
+/mnt/isilon/immgen_res/data/gnomad-nc-constraint-v31-paper/genome_downsampled_1000.ht
+
+# context downsampled
+/mnt/isilon/immgen_res/data/gnomad-nc-constraint-v31-paper
