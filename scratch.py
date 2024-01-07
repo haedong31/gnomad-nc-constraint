@@ -4,6 +4,11 @@ from pathlib import Path
 
 hl.init()
 
+data_dir = Path('./data')
+context_down_tbl = hl.read_table(str(data_dir/'context_downsampled_1000.ht'))
+genome_down_tbl = hl.read_table(str(data_dir/'genome_downsampled_1000.ht'))
+
+
 ##### Basic Table tutorial -----
 hl.utils.get_movie_lens('data/')
 users = hl.read_table('data/users.ht')
