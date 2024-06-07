@@ -1,3 +1,6 @@
+Google Cloud bucket for inputs
+https://console.cloud.google.com/storage/browser/gnomad-nc-constraint-v31-paper
+
 >>> context_tbl.aggregate(hl.agg.collect_as_set(context_tbl['variant_type']))
 {'CpG', 'non-CpG transition', 'transversion'}=================> (737 + 8) / 761]
 
