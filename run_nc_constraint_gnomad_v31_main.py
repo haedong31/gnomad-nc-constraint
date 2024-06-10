@@ -12,6 +12,7 @@ import scipy
 from scipy import stats
 import math
 import sklearn
+from sklearn.metrics import r2_score
 from sklearn.decomposition import IncrementalPCA
 import statsmodels.api as sm
 import pickle
@@ -322,6 +323,7 @@ if __name__ == '__main__':
     parser.add_argument('-output_bucket', help='output gs://bucket_name/', required=True)
     parser.add_argument('-output_dir', help='output /path/to/local/dir_name', required=True)
     # parser.add_argument('-skip_hail', help='skip processing steps by Hail')
+    # -output_bucket "gs://gnomad-test" -output_dir "output_dir"
     args = parser.parse_args()
     main(args)
 
