@@ -6,3 +6,33 @@ https://console.cloud.google.com/storage/browser/gnomad-nc-constraint-v31-paper
 
 # context downsampled
 ln -s /mnt/isilon/immgen_res/data/gnomad-nc-constraint-v31-paper/context_downsampled_1000.ht
+
+==> Summary
+🍺  /opt/homebrew/Cellar/openjdk@11/11.0.23: 668 files, 296.3MB
+==> Running `brew cleanup openjdk@11`...
+Removing: /opt/homebrew/Cellar/openjdk@11/11.0.21... (667 files, 296.2MB)
+==> Checking for dependents of upgraded formulae...
+==> No broken dependents found!
+==> Caveats
+==> postgresql@14
+This formula has created a default database cluster with:
+  initdb --locale=C -E UTF-8 /opt/homebrew/var/postgresql@14
+For more details, read:
+  https://www.postgresql.org/docs/14/app-initdb.html
+
+To start postgresql@14 now and restart at login:
+  brew services start postgresql@14
+Or, if you don't want/need a background service you can just run:
+  /opt/homebrew/opt/postgresql@14/bin/postgres -D /opt/homebrew/var/postgresql@14
+==> openjdk@11
+For the system Java wrappers to find this JDK, symlink it with
+  sudo ln -sfn /opt/homebrew/opt/openjdk@11/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk-11.jdk
+
+openjdk@11 is keg-only, which means it was not symlinked into /opt/homebrew,
+because this is an alternate version of another formula.
+
+If you need to have openjdk@11 first in your PATH, run:
+  echo 'export PATH="/opt/homebrew/opt/openjdk@11/bin:$PATH"' >> ~/.zshrc
+
+For compilers to find openjdk@11 you may need to set:
+  export CPPFLAGS="-I/opt/homebrew/opt/openjdk@11/include"

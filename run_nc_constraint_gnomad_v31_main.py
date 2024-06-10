@@ -16,11 +16,12 @@ from sklearn.metrics import r2_score
 from sklearn.decomposition import IncrementalPCA
 import statsmodels.api as sm
 import pickle
+from pathlib import Path
 
 input_bucket = 'gs://gnomad-nc-constraint-v31-paper'
 cwd = os.getcwd()
 sys.path.append(cwd)
-os.system('gsutil cp {0}/misc/*.py {1}'.format(input_bucket,cwd))
+# os.system('gsutil cp {0}/misc/*.py {1}'.format(input_bucket,cwd))
 from generic import *
 from constraint_basics import *
 from nc_constraint_utils import *
@@ -32,7 +33,9 @@ def main(args):
     output_bucket = args.output_bucket
     output_dir = args.output_dir
     # skip_hail = args.skip_hail
-    if not os.path.exists('{0}/tmp'.format(output_dir)): os.mkdir('{0}/tmp'.format(output_dir))
+
+    (Path(output_dir)/'tmp').mkdir(parents=True, exist_ok=True)
+    # if not os.path.exists('{0}/tmp'.format(output_dir)): os.mkdir('{0}/tmp'.format(output_dir))
 
     ### Prefilter context ht and genome ht
     context_ht = hl.read_table('{0}/context_prepared.ht'.format(input_bucket))
