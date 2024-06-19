@@ -8,19 +8,16 @@ import os
 import sys
 from functools import reduce
 import numpy as np
-import scipy
-from scipy import stats
-import math
-import sklearn
 from sklearn.metrics import r2_score
-from sklearn.decomposition import IncrementalPCA
 import statsmodels.api as sm
 import pickle
 from pathlib import Path
 
-input_bucket = 'gs://gnomad-nc-constraint-v31-paper'
+# input_bucket = 'gs://gnomad-nc-constraint-v31-paper'
+input_bucket = Path('/mnt/isilon/immgen_res/data/gnomad-nc-constraint-v31-paper')
 cwd = os.getcwd()
 sys.path.append(cwd)
+
 # os.system('gsutil cp {0}/misc/*.py {1}'.format(input_bucket,cwd))
 from generic import *
 from constraint_basics import *
@@ -40,28 +37,37 @@ def main(args):
     ### Prefilter context ht and genome ht
     context_ht = hl.read_table('{0}/context_prepared.ht'.format(input_bucket))
     genome_ht = hl.read_table('{0}/genome_prepared.ht'.format(input_bucket))
-    filter_to_autosomes_par(remove_coverage_outliers(context_ht)).write('{0}/context_prefiltered.ht'.format(output_bucket))
-    filter_to_autosomes_par(remove_coverage_outliers(genome_ht)).write('{0}/genome_prefiltered.ht'.format(output_bucket))
-
-
+    # filter_to_autosomes_par(remove_coverage_outliers(context_ht)).write('{0}/context_prefiltered.ht'.format(output_bucket))
+    # filter_to_autosomes_par(remove_coverage_outliers(genome_ht)).write('{0}/genome_prefiltered.ht'.format(output_bucket))
+    # -> input_bucket/context_prefiltered.ht
+    # -> input_bucket/genome_prefiltered.ht 
+    
     ### Compute mu for each context and methyl level from downsampled data
 
     # count observed and possible variants by context and methyl
     context_ht = hl.read_table('{0}/context_downsampled_1000.ht'.format(input_bucket))
     genome_ht = hl.read_table('{0}/genome_downsampled_1000.ht'.format(input_bucket))
 
+    # Observed
     observed_ht = count_variants(genome_ht, count_downsamplings=['global', 'nfe', 'afr'],
                                  additional_grouping=('methyl_level',), omit_methylation=True)
     # observed_ht.write('{0}/observed_counts_by_context_methyl_downsampled_1000.ht'.format(output_bucket))
+    observed_ht = hl.read_table(f"{input_bucket}/observed_counts_by_context_methyl_downsampled_1000.ht")
 
+    # Possible
     grouping = hl.struct(context=context_ht.context, ref=context_ht.ref, alt=context_ht.alt, 
                          methylation_level=context_ht.methyl_level)
     output = {'variant_count': hl.agg.count()}
     possible_ht = context_ht.group_by(**grouping).aggregate(**output)
     # possible_ht.export('{0}/possible_counts_by_context_methyl_downsampled_1000.txt'.format(output_bucket))
+    possible_ht = hl.import_table(
+        f"{input_bucket}/possible_counts_by_context_methyl_downsampled_1000.txt",
+        types={'context':hl.tstr, 'ref':hl.tstr, 'alt':hl.tstr, 'methylation_level':hl.tint32, 'variant_count':hl.tint64})
+    possible_ht = possible_ht.rename({'methylation_level':'methyl_level'})
+    possible_ht = possible_ht.key_by('context','ref','alt','methyl_level')
 
     # compute mu
-    observed_ht = observed_ht.annotate(possible_variants = possible_ht[observed_ht.key].variant_count)
+    observed_ht = observed_ht.annotate(possible_variants = possible_ht[observed_ht.key].variant_count) # key of observed_ht: ['context', 'ref', 'alt', 'methyl_level']
     total_bases = observed_ht.aggregate(hl.agg.sum(observed_ht.possible_variants)) // 3
     total_mu = 1.2e-08
 
@@ -80,17 +86,20 @@ def main(args):
         mu=observed_ht.downsamplings_mu_snp[index_1kg]
         )
 
+    """ 
     observed_ht.select(
         'transition','cpg','variant_type','variant_type_model',
         'possible_variants','observed_1kg','proportion_observed_1kg',
         'mu',
         ).export('{0}/mu_by_context_methyl_downsampled_1000.txt'.format(output_bucket))
+    """
+    observed_ht = hl.read_table(f"{input_bucket}/mu_by_context_methyl_downsampled_1000.txt")
 
-
+    
     ### Compute proportion of possible variants observed for each context and methyl level from the whole dataset
 
-    context_ht = hl.read_table('{0}/context_prefiltered.ht'.format(output_bucket))
-    genome_ht = hl.read_table('{0}/genome_prefiltered.ht'.format(output_bucket))
+    context_ht = hl.read_table((f"{input_bucket}/context_prefiltered.ht"))
+    genome_ht = hl.read_table((f"{input_bucket}/genome_prefiltered.ht"))
     context_ht = filter_black_regions(context_ht.filter((context_ht.coverage_mean >= 30) & (context_ht.coverage_mean <= 32)))  
     genome_ht = genome_ht.semi_join(context_ht)
 
@@ -108,34 +117,37 @@ def main(args):
     grouping = hl.struct(context=genome_ht.context, ref=genome_ht.ref, alt=genome_ht.alt, methylation_level=genome_ht.methyl_level)
     output = {'variant_count': hl.agg.count()}
     observed_ht = genome_ht.group_by(**grouping).aggregate(**output)
-    observed_ht.export('{0}/observed_counts_by_context_methyl.txt'.format(output_bucket))
+    # observed_ht.export('{0}/observed_counts_by_context_methyl.txt'.format(output_bucket))
+    observed_ht = hl.read_table(f"{input_bucket}/observed_counts_by_context_methyl.txt")
 
     grouping = hl.struct(context=context_ht.context, ref=context_ht.ref, alt=context_ht.alt, methylation_level=context_ht.methyl_level)
     output = {'variant_count': hl.agg.count()}
     possible_ht = context_ht.group_by(**grouping).aggregate(**output)
-    possible_ht.export('{0}/possible_counts_by_context_methyl.txt'.format(output_bucket))
+    # possible_ht.export('{0}/possible_counts_by_context_methyl.txt'.format(output_bucket))
+    possible_ht = hl.read_table(f"{input_bucket}/possible_counts_by_context_methyl.txt")
 
 
     ### Fit proportion_observed ~ mu to obtain the context-specific mutabilities
-
+    """ 
     os.system('gsutil cp {0}/mu_by_context_methyl_downsampled_1000.txt {1}'.format(output_bucket,output_dir))
     os.system('gsutil cp {0}/observed_counts_by_context_methyl.txt {1}'.format(output_bucket,output_dir))
     os.system('gsutil cp {0}/possible_counts_by_context_methyl.txt {1}'.format(output_bucket,output_dir))
+    """
     def sem(x,n):
         import numpy as np
         p=float(x)/n
-        return np.sqrt(p*(1-p)/float(n))
+        return np.sqrt(p*(1-p)/float(n)) # sigma/sqrt(n), x ~ binom(n, p)
 
-    df_possible = pd.read_csv('{0}/possible_counts_by_context_methyl.txt'.format(output_dir), 
+    df_possible = pd.read_csv('{0}/possible_counts_by_context_methyl.txt'.format(input_bucket), 
                         sep='\t', index_col=['context','ref','alt','methylation_level']).rename(
         columns={'variant_count':'possible'})
-    df_observed = pd.read_csv('{0}/observed_counts_by_context_methyl.txt'.format(output_dir), 
+    df_observed = pd.read_csv('{0}/observed_counts_by_context_methyl.txt'.format(input_bucket), 
                         sep='\t', index_col=['context','ref','alt','methylation_level']).rename(
         columns={'variant_count':'observed'})
     df_po = df_possible.join(df_observed)
     df_po['proportion_observed'] = df_po['observed']/df_po['possible']
 
-    df_mu = pd.read_csv('{0}/mu_by_context_methyl_downsampled_1000.txt'.format(output_dir),
+    df_mu = pd.read_csv('{0}/mu_by_context_methyl_downsampled_1000.txt'.format(input_bucket),
                        sep='\t').rename(columns={'methyl_level':'methylation_level'})
     df_mu = df_mu.set_index(['context','ref','alt','methylation_level'])
     df_mu['sem'] = df_mu.apply(lambda row : sem(row['observed_1kg'], row['possible_variants']), axis = 1)
@@ -147,11 +159,13 @@ def main(args):
     # 0.9987386340206728 (-18849750.846093018, -7.32454948743116e-05)
 
     # ouput mutation rate table
+    df_po.drop(columns=['sem']).reset_index()
+    """ 
     df_po.drop(columns=['sem']).reset_index().to_csv(
         '{0}/mutation_rate_by_context_methyl.txt'.format(output_dir),
         sep='\t', quoting=csv.QUOTE_NONE, header=True, index=False)
-
     os.system('gsutil cp {0}/mutation_rate_by_context_methyl.txt {1}'.format(output_dir,output_bucket))
+    """
 
 
     ### Compute expected number of variants across the genome (per 1kb) based on the context-specific mutation rates
@@ -318,18 +332,12 @@ def main(args):
     os.system('rm -rf {0}/tmp/'.format(output_dir))
     os.system('rm {0}/hail*log'.format(output_dir))
 
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-output_bucket', help='output gs://bucket_name/', required=True)
-    parser.add_argument('-output_dir', help='output /path/to/local/dir_name', required=True)
+    parser.add_argument('-output_dir', default='output', help='output /path/to/local/dir_name', required=True)
     # parser.add_argument('-skip_hail', help='skip processing steps by Hail')
     # -output_bucket "gs://gnomad-test" -output_dir "output_dir"
     args = parser.parse_args()
     main(args)
-
-
-
-
