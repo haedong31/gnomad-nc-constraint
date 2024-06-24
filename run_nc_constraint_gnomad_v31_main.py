@@ -64,7 +64,7 @@ def main(args):
         f"{input_bucket}/possible_counts_by_context_methyl_downsampled_1000.txt",
         types={'context':hl.tstr, 'ref':hl.tstr, 'alt':hl.tstr, 'methylation_level':hl.tint32, 'variant_count':hl.tint64})
     possible_ht = possible_ht.rename({'methylation_level':'methyl_level'})
-    possible_ht = possible_ht.key_by('context','ref','alt','methyl_level')
+    possible_ht = possible_ht.key_by('context','ref','alt','methylation_level')
 
     # compute mu
     observed_ht = observed_ht.annotate(possible_variants = possible_ht[observed_ht.key].variant_count) # key of observed_ht: ['context', 'ref', 'alt', 'methyl_level']
@@ -184,6 +184,7 @@ def main(args):
     possible_ht.write('{0}/possible_counts_by_context_methyl_genome_1kb.ht'.format(output_bucket))
     # hl.read_table('{0}/possible_counts_by_context_methyl_genome_1kb.ht'.format(output_bucket)).export(
     #     '{0}/possible_counts_by_context_methyl_genome_1kb.txt'.format(output_bucket))
+    possible_ht = hl.read_table((f"{input_bucket}/possible_counts_by_context_methyl_genome_1kb.ht"))
 
     # count observed variants per 1kb (save for computing contraint z scores)
     grouping = hl.struct(element_id = genome_ht.element_id)
@@ -192,9 +193,10 @@ def main(args):
     observed_ht.write('{0}/observed_counts_genome_1kb.ht'.format(output_bucket))
     hl.read_table('{0}/o1bserved_counts_genome_1kb.ht'.format(output_bucket)).export(
         '{0}/observed_counts_genome_1kb.txt'.format(output_bucket))
-
+    observed_ht = hl.read_table((f"{input_bucket}/observed_counts_genome_1kb.ht"))
+    
     # compute expected number of variants per 1kb, per context
-    po_ht = hl.import_table('{0}/mutation_rate_by_context_methyl.txt'.format(output_bucket),
+    po_ht = hl.import_table('{0}/mutation_rate_by_context_methyl.txt'.format(input_bucket),
                             delimiter='\t', 
                             types={'methylation_level':hl.tint, 
                                    'possible':hl.tint64, 
@@ -202,7 +204,7 @@ def main(args):
                                    'proportion_observed':hl.tfloat,
                                    'mu':hl.tfloat,
                                    'fitted_po':hl.tfloat}).key_by('context','ref','alt','methylation_level')
-    possible_ht = possible_ht.key_by('context','ref','alt','methylation_level')
+    possible_ht = possible_ht.key_by('context','ref','alt','methylation_level') # exclude
     possible_ht = possible_ht.annotate(expected=possible_ht.variant_count*po_ht[possible_ht.key].fitted_po)
     possible_ht = possible_ht.key_by('element_id','context')
 

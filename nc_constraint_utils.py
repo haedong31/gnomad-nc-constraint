@@ -85,7 +85,7 @@ def annotate_variant_types(t: Union[hl.MatrixTable, hl.Table],
 
  
 def filter_black_regions(ht: Union[hl.MatrixTable, hl.Table]) -> Union[hl.MatrixTable, hl.Table]:
-    bed = hl.import_bed('gs://gnomad-nc-constraint-v31-paper/misc/blacklist_gap2.bed', reference_genome='GRCh38', skip_invalid_intervals=True)
+    bed = hl.import_bed('/mnt/isilon/immgen_res/data/gnomad-nc-constraint-v31-paper/misc/blacklist_gap2.bed', reference_genome='GRCh38', skip_invalid_intervals=True)
     return ht.filter(hl.is_defined(bed[ht.locus]), keep=False)
 
 
